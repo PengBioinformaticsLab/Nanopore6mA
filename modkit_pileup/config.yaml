@@ -1,3 +1,5 @@
+# Hard coded file paths for the DNA methylation project
+# Paths can be changed as needed for different users/samples
 ref: "/geode2/home/u040/justren/Quartz/fasta_ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
 cram_base: "/N/scratch/cmguser/production/download"
 bam_base: "/N/project/ICMH/Projects/6mA_COGA/filtered_reversed_bams"
