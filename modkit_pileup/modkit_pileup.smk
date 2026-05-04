@@ -2,6 +2,7 @@ import csv
 
 configfile: "config.yaml"
 
+# Global variables extracted from config for easier access throughout the workflow
 REF = config["ref"]
 CRAM_BASE = config["cram_base"]
 BAM_BASE = config["bam_base"]
@@ -9,6 +10,8 @@ MANIFEST = config["manifest"]
 MODKIT = config["modkit"]
 PILEUP_BASE = config["pileup_base"]
 
+# Function to read the manifest
+# Manifest is written in the format of: SampleName,PathToCramFile,NameOfOutputBAMFile as a .csv
 def parse_manifest(manifest_path):
     samples = {}
     with open(manifest_path) as f:
@@ -24,12 +27,17 @@ def parse_manifest(manifest_path):
             }
     return samples
 
+# Parse the manifest into a dictionary for Snakemake to use
 SAMPLES = parse_manifest(MANIFEST)
 
+# Target rule: Defines the final expected output files for the entire pipeline
+# This ensures that a 6mA pileup bed file is generated for every sample found in the manifest
 rule all:
     input:
         expand(PILEUP_BASE + "/{sample}_6mA_pileup.bed.gz", sample=SAMPLES.keys())
 
+# Rule to convert CRAM files back to BAM format
+# Filters by mapping quality (MAPQ) and requires the original reference genome for decompression
 rule cram_to_bam:
     input:
         cram=lambda wc: CRAM_BASE + "/" + SAMPLES[wc.sample]["cram_sub"],
@@ -58,6 +66,8 @@ rule cram_to_bam:
         2>&1 | tee {log}
         """
 
+# Rule to generate a BAM index (.bai)
+# Required for downstream tools like modkit to perform random access on the alignment data
 rule index_bam:
     input:
         bam=BAM_BASE + "/{sample}_revert.bam",
@@ -75,6 +85,9 @@ rule index_bam:
         samtools index -@ {threads} {input.bam} 2>&1 | tee {log}
         """
 
+# Rule to run modkit pileup
+# The A 0 motif is designated to focus on 6mA methylation
+# Output is piped through bgzip to produce a compressed, indexed-ready BED file
 rule modkit_pileup_6mA:
     input:
         bam=BAM_BASE + "/{sample}_revert.bam",
