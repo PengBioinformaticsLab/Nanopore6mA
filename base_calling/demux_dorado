@@ -1,0 +1,41 @@
+!/bin/bash
+
+#SBATCH -J job_name
+#SBATCH -p gpu
+#SBATCH --gres=gpu:v100:1
+#SBATCH --cpus-per-task=10
+#SBATCH --mem=180G
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=user@email.edu
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=48:00:00
+#SBATCH -A -----
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.er
+
+# Define paths
+dorado="/path/to/dorado/executable"
+INPUT_DIR="/path/to/pod5/files"
+MODEL="/path/to/dorado/model"
+SAMPLE_SHEET="/path/to/sample/sheet"
+BASE_OUTPUT_DIR="/path/to/output/directory"
+
+RUN_ID=$(basename "$INPUT_DIR")
+RUN_DIR="$BASE_OUTPUT_DIR/$RUN_ID"
+
+mkdir -p "$RUN_DIR"
+
+TMP_BAM="$RUN_DIR/${RUN_ID}_calls.bam"
+
+$dorado basecaller "$MODEL" "$INPUT_DIR" \
+	--kit-name SQK-NBD114-24 \
+	--modified-bases space separated modifications \
+	 > $TMP_BAM
+$dorado demux \
+	--no-classify \
+	--sample-sheet "$SAMPLE_SHEET" \
+	--output-dir "$RUN_DIR" \
+	"$TMP_BAM"
+
+echo "Processing complete for $RUN_ID. Files are located in $RUN_DIR
